@@ -10,13 +10,13 @@ with open('config.json', 'r') as f:
     config = json.load(f)
 
 # Configurable variables
-enable_loki_logging = config.get('enable_loki_logging', False)
-loki_url = config.get('loki_url', 'http://localhost:3100/loki/api/v1/push')
-log_other_devices = config.get('log_other_devices', False)
-kofferid = config.get('kofferid', 'unknown')
-lat = config.get('lat', 'unknown')
-lon = config.get('lon', 'unknown')
-alert = config.get('alert', 'unknown')
+enable_loki_logging = config.get('enable_loki_logging', False) # enable logging to loki
+loki_url = config.get('loki_url', 'http://localhost:3100/loki/api/v1/push') # loki url, for now unauthenticated only
+log_other_devices = config.get('log_other_devices', False) # for troubleshooting, this will output all bluetooth devices found
+kofferid = config.get('kofferid', 'unknown') # name of the device
+lat = config.get('lat', 'unknown') # latitude of the device
+lon = config.get('lon', 'unknown') # lonitude of the device
+alert = config.get('alert', 'f0') # configures the alert name to be send to loki
 cooldown_period = config.get('cooldown_period', 60)  # seconds, default to 60 seconds if not set in config
 
 # Setup logging to console
