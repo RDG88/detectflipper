@@ -2,6 +2,7 @@ import bluepy.btle as btle
 import logging
 import json
 import time
+from loki_logger import LokiHandler
 
 # Load configuration
 with open('config.json', 'r') as f:
@@ -16,12 +17,16 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
+# Setup Loki logging with JSON format
+loki_handler = LokiHandler(url=config['loki_url'], tags={"application": "bluetooth_scanner"})
+logger.addHandler(loki_handler)
+
 # Initialize a cache for detected devices with a cooldown period (e.g., 60 seconds)
 detected_devices = {}
 cooldown_period = 60  # seconds
 
 # Variable to control logging of other devices
-log_other_devices = False  # Set to False to disable logging of other devices
+log_other_devices = config.get('log_other_devices', False)  # Set to False to disable logging of other devices
 
 class ScanDelegate(btle.DefaultDelegate):
     def __init__(self):
@@ -50,9 +55,27 @@ class ScanDelegate(btle.DefaultDelegate):
         if dev.addr not in detected_devices or (current_time - detected_devices[dev.addr]) > cooldown_period:
             rssi = dev.rssi
             if device_uuid != "NOT FOUND":
-                logger.info(f"Detected Flipper Zero: {dev.addr}, Name: {device_name}, Manufacturer: {device_manufacturer}, UUID: {device_uuid}, Type: {device_type}, RSSI: {rssi}")
+                message = {
+                    "timestamp": current_time,
+                    "type": "Flipper Zero",
+                    "address": dev.addr,
+                    "name": device_name,
+                    "manufacturer": device_manufacturer,
+                    "uuid": device_uuid,
+                    "device_type": device_type,
+                    "rssi": rssi
+                }
+                logger.info(json.dumps(message))
             elif log_other_devices:
-                logger.info(f"Detected Device: {dev.addr}, Name: {device_name}, Manufacturer: {device_manufacturer}, RSSI: {rssi}")
+                message = {
+                    "timestamp": current_time,
+                    "type": "Other Device",
+                    "address": dev.addr,
+                    "name": device_name,
+                    "manufacturer": device_manufacturer,
+                    "rssi": rssi
+                }
+                logger.info(json.dumps(message))
             detected_devices[dev.addr] = current_time  # Update the detection time
         else:
             if device_uuid != "NOT FOUND":
