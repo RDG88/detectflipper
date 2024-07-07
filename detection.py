@@ -70,6 +70,7 @@ log_other_devices = config.get('log_other_devices', True)  # Set to False to dis
 kofferid = config.get('kofferid', 'unknown')
 lat = config.get('lat', 'unknown')
 lon = config.get('lon', 'unknown')
+alert = config.get('alert', 'unknown')
 
 class ScanDelegate(btle.DefaultDelegate):
     def __init__(self):
@@ -109,7 +110,8 @@ class ScanDelegate(btle.DefaultDelegate):
                     "rssi": rssi,
                     "kofferid": kofferid,
                     "lat": lat,
-                    "lon": lon
+                    "lon": lon,
+                    "alert": alert
                 }
                 logger.warning(json.dumps(message))  # Log Flipper Zero detections as WARNING
             elif log_other_devices:

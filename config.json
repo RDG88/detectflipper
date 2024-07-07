@@ -4,5 +4,6 @@
     "enable_loki_logging": true,
     "kofferid": "graafnet-koffer",
     "lat": "52.078663",
-    "lon": "4.288788s"
+    "lon": "4.288788s",
+    "alert": "f0"
 }
