@@ -2,7 +2,8 @@ import bluepy.btle as btle
 import logging
 import json
 import time
-from loki_logger import LokiHandler
+import requests
+from logging_loki import LokiHandler
 
 # Load configuration
 with open('config.json', 'r') as f:
@@ -17,16 +18,38 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-# Setup Loki logging with JSON format
-loki_handler = LokiHandler(url=config['loki_url'], tags={"application": "bluetooth_scanner"})
-logger.addHandler(loki_handler)
+# Variable to control logging to Loki
+enable_loki_logging = config.get('enable_loki_logging', True)
+
+# Function to check if Loki is reachable
+def check_loki_reachable(url):
+    try:
+        response = requests.get(url, timeout=5)
+        return response.status_code == 200
+    except requests.RequestException as e:
+        logger.error(f"Failed to reach Loki: {e}")
+        return False
+
+# Setup Loki logging if enabled and Loki is reachable
+if enable_loki_logging:
+    loki_url = config['loki_url']
+    if check_loki_reachable(loki_url):
+        loki_handler = LokiHandler(
+            url=loki_url,
+            tags={"application": "bluetooth_scanner"},
+            version="1",
+        )
+        logger.addHandler(loki_handler)
+    else:
+        logger.error("Loki is not reachable. Disabling Loki logging.")
+        enable_loki_logging = False
 
 # Initialize a cache for detected devices with a cooldown period (e.g., 60 seconds)
 detected_devices = {}
 cooldown_period = 60  # seconds
 
 # Variable to control logging of other devices
-log_other_devices = config.get('log_other_devices', False)  # Set to False to disable logging of other devices
+log_other_devices = config.get('log_other_devices', True)  # Set to False to disable logging of other devices
 
 class ScanDelegate(btle.DefaultDelegate):
     def __init__(self):
@@ -66,6 +89,8 @@ class ScanDelegate(btle.DefaultDelegate):
                     "rssi": rssi
                 }
                 logger.info(json.dumps(message))
+                if enable_loki_logging:
+                    logger.info(message)  # This will send the message to Loki as well
             elif log_other_devices:
                 message = {
                     "timestamp": current_time,
@@ -76,6 +101,8 @@ class ScanDelegate(btle.DefaultDelegate):
                     "rssi": rssi
                 }
                 logger.info(json.dumps(message))
+                if enable_loki_logging:
+                    logger.info(message)  # This will send the message to Loki as well
             detected_devices[dev.addr] = current_time  # Update the detection time
         else:
             if device_uuid != "NOT FOUND":

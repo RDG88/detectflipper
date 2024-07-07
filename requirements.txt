@@ -1,2 +1,2 @@
 bluepy
-python-logging-lokis
+python-logging-loki
