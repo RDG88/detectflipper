@@ -14,19 +14,29 @@ try:
 except FileNotFoundError:
     print("Config file not found, proceeding with default values or environment variables.")
 
-# Function to get config value with environment variable override
+# Function to get config value with environment variable override and identify source
 def get_config_value(key, default_value):
-    return os.getenv(key.upper(), config.get(key, default_value))
+    value = os.getenv(key.upper(), config.get(key, default_value))
+    source = "default"
+    if os.getenv(key.upper()) is not None:
+        source = "environment variable"
+    elif key in config:
+        source = "config file"
+    return value, source
 
-# Configurable variables
-enable_loki_logging = get_config_value('enable_loki_logging', True)
-loki_url = get_config_value('loki_url', 'http://localhost:3100/loki/api/v1/push')
-log_other_devices = get_config_value('log_other_devices', True)
-kofferid = get_config_value('kofferid', 'unknown')
-lat = get_config_value('lat', 'unknown')
-lon = get_config_value('lon', 'unknown')
-alert = get_config_value('alert', 'unknown')
-cooldown_period = int(get_config_value('cooldown_period', 60))  # seconds, default to 60 seconds if not set in config
+# Configurable variables and their sources
+enable_loki_logging, enable_loki_logging_source = get_config_value('enable_loki_logging', True)
+loki_url, loki_url_source = get_config_value('loki_url', 'http://localhost:3100/loki/api/v1/push')
+log_other_devices, log_other_devices_source = get_config_value('log_other_devices', True)
+kofferid, kofferid_source = get_config_value('kofferid', 'unknown')
+lat, lat_source = get_config_value('lat', 'unknown')
+lon, lon_source = get_config_value('lon', 'unknown')
+alert, alert_source = get_config_value('alert', 'unknown')
+cooldown_period, cooldown_period_source = get_config_value('cooldown_period', 60)
+
+# Convert enable_loki_logging and log_other_devices to boolean
+enable_loki_logging = enable_loki_logging in ['true', 'True', True]
+log_other_devices = log_other_devices in ['true', 'True', True]
 
 # Setup logging to console
 logger = logging.getLogger("f0_scanner")
@@ -36,6 +46,17 @@ console_handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+
+# Log configuration
+logger.info("Configuration:")
+logger.info(f"ENABLE_LOKI_LOGGING: {enable_loki_logging} (source: {enable_loki_logging_source})")
+logger.info(f"LOKI_URL: {loki_url} (source: {loki_url_source})")
+logger.info(f"LOG_OTHER_DEVICES: {log_other_devices} (source: {log_other_devices_source})")
+logger.info(f"KOFFERID: {kofferid} (source: {kofferid_source})")
+logger.info(f"LAT: {lat} (source: {lat_source})")
+logger.info(f"LON: {lon} (source: {lon_source})")
+logger.info(f"ALERT: {alert} (source: {alert_source})")
+logger.info(f"COOLDOWN_PERIOD: {cooldown_period} (source: {cooldown_period_source})")
 
 # Function to check if Loki is reachable
 def check_loki_reachable(url):
@@ -100,18 +121,6 @@ class ScanDelegate(btle.DefaultDelegate):
             elif value == "00003083-0000-1000-8000-00805f9b34fb":
                 device_uuid = value
                 device_type = "Transparent"
-            # Potentially interesting fields:
-            # elif desc == "Shortened Local Name":
-            #     shortened_name = value
-            # elif desc == "TX Power Level":
-            #     tx_power = value
-            # elif desc == "Appearance":
-            #     appearance = value
-            # elif desc == "16b Service Data" or desc == "128b Service Data":
-            #     service_data[desc] = value
-            # elif desc == "16b Service UUIDs" or desc == "32b Service UUIDs" or desc == "128b Service UUIDs":
-            #     service_uuids.append(value)
-        
         current_time = time.time()
         if dev.addr not in detected_devices or (current_time - detected_devices[dev.addr]) > cooldown_period:
             rssi = dev.rssi
@@ -148,10 +157,10 @@ class ScanDelegate(btle.DefaultDelegate):
 
 if __name__ == "__main__":
     scanner = btle.Scanner().withDelegate(ScanDelegate())
-    logger.info("Starting F0 scanner...")
+    logger.info("Starting Bluetooth scanner...")
     while True:
         try:
-            logger.info("Scanning for Flippers...")
+            logger.info("Scanning for devices...")
             scanner.scan(10.0)
         except Exception as e:
             logger.error(f"Error in scanning: {e}")
