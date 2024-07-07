@@ -9,17 +9,24 @@ from logging_loki import LokiHandler
 with open('config.json', 'r') as f:
     config = json.load(f)
 
+# Configurable variables
+enable_loki_logging = config.get('enable_loki_logging', False)
+loki_url = config.get('loki_url', 'http://localhost:3100/loki/api/v1/push')
+log_other_devices = config.get('log_other_devices', False)
+kofferid = config.get('kofferid', 'unknown')
+lat = config.get('lat', 'unknown')
+lon = config.get('lon', 'unknown')
+alert = config.get('alert', 'unknown')
+cooldown_period = config.get('cooldown_period', 60)  # seconds, default to 60 seconds if not set in config
+
 # Setup logging to console
-logger = logging.getLogger("f0_scanners")
+logger = logging.getLogger("f0_scanner")
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
-
-# Variable to control logging to Loki
-enable_loki_logging = config.get('enable_loki_logging', True)
 
 # Function to check if Loki is reachable
 def check_loki_reachable(url):
@@ -40,7 +47,6 @@ class FlipperZeroFilter(logging.Filter):
 # Function to setup Loki logging with retry mechanism
 def setup_loki_logging():
     while enable_loki_logging:
-        loki_url = config['loki_url']
         if check_loki_reachable(loki_url):
             loki_handler = LokiHandler(
                 url=loki_url,
@@ -59,18 +65,8 @@ def setup_loki_logging():
 if enable_loki_logging:
     setup_loki_logging()
 
-# Initialize a cache for detected devices with a cooldown period (configurable)
+# Initialize a cache for detected devices with a cooldown period
 detected_devices = {}
-cooldown_period = config.get('cooldown_period', 60)  # seconds, default to 60 seconds if not set in config
-
-# Variable to control logging of other devices
-log_other_devices = config.get('log_other_devices', False)  # Set to False to disable logging of other devices
-
-# Get additional fields from config
-kofferid = config.get('kofferid', 'unknown')
-lat = config.get('lat', 'unknown')
-lon = config.get('lon', 'unknown')
-alert = config.get('alert', 'unknown')
 
 class ScanDelegate(btle.DefaultDelegate):
     def __init__(self):
