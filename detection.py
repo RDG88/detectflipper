@@ -3,21 +3,30 @@ import logging
 import json
 import requests
 import time
+import os
 from logging_loki import LokiHandler
 
 # Load configuration
-with open('config.json', 'r') as f:
-    config = json.load(f)
+config = {}
+try:
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+except FileNotFoundError:
+    print("Config file not found, proceeding with default values or environment variables.")
+
+# Function to get config value with environment variable override
+def get_config_value(key, default_value):
+    return os.getenv(key.upper(), config.get(key, default_value))
 
 # Configurable variables
-enable_loki_logging = config.get('enable_loki_logging', False) # enable logging to loki
-loki_url = config.get('loki_url', 'http://localhost:3100/loki/api/v1/push') # loki url, for now unauthenticated only
-log_other_devices = config.get('log_other_devices', False) # for troubleshooting, this will output all bluetooth devices found
-kofferid = config.get('kofferid', 'unknown') # name of the device
-lat = config.get('lat', 'unknown') # latitude of the device
-lon = config.get('lon', 'unknown') # lonitude of the device
-alert = config.get('alert', 'f0') # configures the alert name to be send to loki
-cooldown_period = config.get('cooldown_period', 60)  # seconds, default to 60 seconds if not set in config
+enable_loki_logging = get_config_value('enable_loki_logging', True)
+loki_url = get_config_value('loki_url', 'http://localhost:3100/loki/api/v1/push')
+log_other_devices = get_config_value('log_other_devices', True)
+kofferid = get_config_value('kofferid', 'unknown')
+lat = get_config_value('lat', 'unknown')
+lon = get_config_value('lon', 'unknown')
+alert = get_config_value('alert', 'unknown')
+cooldown_period = int(get_config_value('cooldown_period', 60))  # seconds, default to 60 seconds if not set in config
 
 # Setup logging to console
 logger = logging.getLogger("f0_scanner")
