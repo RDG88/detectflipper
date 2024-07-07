@@ -22,6 +22,16 @@ def get_config_value(key, default_value):
         source = "environment variable"
     elif key in config:
         source = "config file"
+    
+    # Convert value to the type of default_value
+    if isinstance(default_value, bool):
+        value = value in ['true', 'True', '1', True]
+    elif isinstance(default_value, int):
+        try:
+            value = int(value)
+        except ValueError:
+            value = default_value
+    
     return value, source
 
 # Configurable variables and their sources
@@ -35,8 +45,8 @@ alert, alert_source = get_config_value('alert', 'unknown')
 cooldown_period, cooldown_period_source = get_config_value('cooldown_period', 60)
 
 # Convert enable_loki_logging and log_other_devices to boolean
-enable_loki_logging = enable_loki_logging in ['true', 'True', True]
-log_other_devices = log_other_devices in ['true', 'True', True]
+enable_loki_logging = enable_loki_logging in ['true', 'True', '1', True]
+log_other_devices = log_other_devices in ['true', 'True', '1', True]
 
 # Setup logging to console
 logger = logging.getLogger("f0_scanner")
@@ -121,6 +131,7 @@ class ScanDelegate(btle.DefaultDelegate):
             elif value == "00003083-0000-1000-8000-00805f9b34fb":
                 device_uuid = value
                 device_type = "Transparent"
+        
         current_time = time.time()
         if dev.addr not in detected_devices or (current_time - detected_devices[dev.addr]) > cooldown_period:
             rssi = dev.rssi
