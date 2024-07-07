@@ -1,5 +1,8 @@
 {
     "loki_url": "http://loki.graafnet.nl/loki/api/v1/push",
     "log_other_devices": false,
-    "enable_loki_logging": false
+    "enable_loki_logging": true,
+    "kofferid": "graafnet-koffer",
+    "lat": "52.078663",
+    "lon": "4.288788s"
 }

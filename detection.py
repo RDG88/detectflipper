@@ -1,8 +1,8 @@
 import bluepy.btle as btle
 import logging
 import json
-import time
 import requests
+import time
 from logging_loki import LokiHandler
 
 # Load configuration
@@ -10,7 +10,7 @@ with open('config.json', 'r') as f:
     config = json.load(f)
 
 # Setup logging to console
-logger = logging.getLogger("device_detection")
+logger = logging.getLogger("f0_scanners")
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
@@ -25,24 +25,39 @@ enable_loki_logging = config.get('enable_loki_logging', True)
 def check_loki_reachable(url):
     try:
         response = requests.get(url, timeout=5)
-        return response.status_code == 200
+        return response.status_code == 405  # 405 Method Not Allowed is expected for GET on Loki push endpoint
     except requests.RequestException as e:
         logger.error(f"Failed to reach Loki: {e}")
         return False
 
-# Setup Loki logging if enabled and Loki is reachable
+# Custom filter to log only Flipper Zero devices to Loki
+class FlipperZeroFilter(logging.Filter):
+    def filter(self, record):
+        if 'Flipper Zero' in record.getMessage():
+            return True
+        return False
+
+# Function to setup Loki logging with retry mechanism
+def setup_loki_logging():
+    while enable_loki_logging:
+        loki_url = config['loki_url']
+        if check_loki_reachable(loki_url):
+            loki_handler = LokiHandler(
+                url=loki_url,
+                tags={"application": "f0_scanner"},
+                version="1",
+            )
+            loki_handler.addFilter(FlipperZeroFilter())  # Add filter to Loki handler
+            loki_handler.setLevel(logging.WARNING)  # Set the log level for Loki handler to WARNING
+            logger.addHandler(loki_handler)
+            logger.info("Loki is reachable. Enabled Loki logging.")
+            break
+        else:
+            logger.error("Loki is not reachable. Retrying in 10 seconds...")
+            time.sleep(10)
+
 if enable_loki_logging:
-    loki_url = config['loki_url']
-    if check_loki_reachable(loki_url):
-        loki_handler = LokiHandler(
-            url=loki_url,
-            tags={"application": "bluetooth_scanner"},
-            version="1",
-        )
-        logger.addHandler(loki_handler)
-    else:
-        logger.error("Loki is not reachable. Disabling Loki logging.")
-        enable_loki_logging = False
+    setup_loki_logging()
 
 # Initialize a cache for detected devices with a cooldown period (e.g., 60 seconds)
 detected_devices = {}
@@ -50,6 +65,11 @@ cooldown_period = 60  # seconds
 
 # Variable to control logging of other devices
 log_other_devices = config.get('log_other_devices', True)  # Set to False to disable logging of other devices
+
+# Get additional fields from config
+kofferid = config.get('kofferid', 'unknown')
+lat = config.get('lat', 'unknown')
+lon = config.get('lon', 'unknown')
 
 class ScanDelegate(btle.DefaultDelegate):
     def __init__(self):
@@ -86,11 +106,12 @@ class ScanDelegate(btle.DefaultDelegate):
                     "manufacturer": device_manufacturer,
                     "uuid": device_uuid,
                     "device_type": device_type,
-                    "rssi": rssi
+                    "rssi": rssi,
+                    "kofferid": kofferid,
+                    "lat": lat,
+                    "lon": lon
                 }
-                logger.info(json.dumps(message))
-                if enable_loki_logging:
-                    logger.info(message)  # This will send the message to Loki as well
+                logger.warning(json.dumps(message))  # Log Flipper Zero detections as WARNING
             elif log_other_devices:
                 message = {
                     "timestamp": current_time,
@@ -101,8 +122,6 @@ class ScanDelegate(btle.DefaultDelegate):
                     "rssi": rssi
                 }
                 logger.info(json.dumps(message))
-                if enable_loki_logging:
-                    logger.info(message)  # This will send the message to Loki as well
             detected_devices[dev.addr] = current_time  # Update the detection time
         else:
             if device_uuid != "NOT FOUND":
