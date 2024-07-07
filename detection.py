@@ -100,6 +100,18 @@ class ScanDelegate(btle.DefaultDelegate):
             elif value == "00003083-0000-1000-8000-00805f9b34fb":
                 device_uuid = value
                 device_type = "Transparent"
+            # Potentially interesting fields:
+            # elif desc == "Shortened Local Name":
+            #     shortened_name = value
+            # elif desc == "TX Power Level":
+            #     tx_power = value
+            # elif desc == "Appearance":
+            #     appearance = value
+            # elif desc == "16b Service Data" or desc == "128b Service Data":
+            #     service_data[desc] = value
+            # elif desc == "16b Service UUIDs" or desc == "32b Service UUIDs" or desc == "128b Service UUIDs":
+            #     service_uuids.append(value)
+        
         current_time = time.time()
         if dev.addr not in detected_devices or (current_time - detected_devices[dev.addr]) > cooldown_period:
             rssi = dev.rssi
