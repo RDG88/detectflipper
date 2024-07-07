@@ -20,6 +20,9 @@ logger.addHandler(console_handler)
 detected_devices = {}
 cooldown_period = 60  # seconds
 
+# Variable to control logging of other devices
+log_other_devices = False  # Set to False to disable logging of other devices
+
 class ScanDelegate(btle.DefaultDelegate):
     def __init__(self):
         btle.DefaultDelegate.__init__(self)
@@ -48,11 +51,12 @@ class ScanDelegate(btle.DefaultDelegate):
             rssi = dev.rssi
             if device_uuid != "NOT FOUND":
                 logger.info(f"Detected Flipper Zero: {dev.addr}, Name: {device_name}, Manufacturer: {device_manufacturer}, UUID: {device_uuid}, Type: {device_type}, RSSI: {rssi}")
-            else:
+            elif log_other_devices:
                 logger.info(f"Detected Device: {dev.addr}, Name: {device_name}, Manufacturer: {device_manufacturer}, RSSI: {rssi}")
             detected_devices[dev.addr] = current_time  # Update the detection time
         else:
-            logger.info(f"Device {dev.addr} detected again within cooldown period; not logging.")
+            if device_uuid != "NOT FOUND":
+                logger.info(f"Device {dev.addr} detected again within cooldown period; not logging.")
 
 if __name__ == "__main__":
     scanner = btle.Scanner().withDelegate(ScanDelegate())
@@ -64,4 +68,3 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"Error in scanning: {e}")
         time.sleep(1)  # Short delay before the next scan
-
