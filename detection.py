@@ -10,7 +10,7 @@ with open('config.json', 'r') as f:
     config = json.load(f)
 
 # Setup logging to console
-logger = logging.getLogger("f0_scanners")
+logger = logging.getLogger("f0_scanner")
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
