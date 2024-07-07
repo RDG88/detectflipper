@@ -10,7 +10,7 @@ with open('config.json', 'r') as f:
     config = json.load(f)
 
 # Setup logging to console
-logger = logging.getLogger("f0_scanner")
+logger = logging.getLogger("f0_scanners")
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
@@ -59,12 +59,12 @@ def setup_loki_logging():
 if enable_loki_logging:
     setup_loki_logging()
 
-# Initialize a cache for detected devices with a cooldown period (e.g., 60 seconds)
+# Initialize a cache for detected devices with a cooldown period (configurable)
 detected_devices = {}
-cooldown_period = 60  # seconds
+cooldown_period = config.get('cooldown_period', 60)  # seconds, default to 60 seconds if not set in config
 
 # Variable to control logging of other devices
-log_other_devices = config.get('log_other_devices', True)  # Set to False to disable logging of other devices
+log_other_devices = config.get('log_other_devices', False)  # Set to False to disable logging of other devices
 
 # Get additional fields from config
 kofferid = config.get('kofferid', 'unknown')
