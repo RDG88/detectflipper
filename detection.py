@@ -148,10 +148,10 @@ class ScanDelegate(btle.DefaultDelegate):
 
 if __name__ == "__main__":
     scanner = btle.Scanner().withDelegate(ScanDelegate())
-    logger.info("Starting Bluetooth scanner...")
+    logger.info("Starting F0 scanner...")
     while True:
         try:
-            logger.info("Scanning for devices...")
+            logger.info("Scanning for Flippers...")
             scanner.scan(10.0)
         except Exception as e:
             logger.error(f"Error in scanning: {e}")
